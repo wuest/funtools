@@ -1,0 +1,140 @@
+= Funtools
+
+Funtools is a collection of tools to help rubyists write ruby in a more
+functional style.
+
+== Requirements
+
+Ruby 1.9.3 and later is supported.
+
+== Using Funtools
+=== Recursion
+
+The 'funtools/recursion' file provides helper methods to assist in writing code
+which is recursive in nature, avoiding issues with Ruby's poor support for
+tail-call optimization.
+
+The +defix+ method allows for creation of methods inside the current scope
+which are expected be run until a fixpoint is reached.
+
+  # Factorial
+  defix(:factorial) { |acc, n=1| n < 2 ? acc : [acc * n, n-1] }
+  factorial(1, 5)
+  # => 120
+
+  # Fibonacci sequence
+  defix(:fibonacci_fix) do |a, b = 1, n = 0|
+    n < 1 ? a : [b, a+b, n-1]
+  end
+
+  # Helper function to avoid calling the fixpoint function with boiler plate
+  # arguments.
+  def fibonacci(n)
+    fibonacci_fix(0, 1, n)
+  end
+  fibonacci(10)
+  # => 55
+
+=== Pattern Matching
+
+The 'funtools/pattern-matching' file provides the +defpattern+ method, which
+assists in writing code using a pattern-matching style.  The resultant method
+will test against each pattern, returning the result from the first match.
+
+  # Fibonacci sequence
+  defpattern(:fibonacci) do
+    fibonacci(nil, nil, 1)   { |a, b, c| a }
+    fibonacci(nil, nil, nil) { |a, b, c| [a + b, a, c - 1] }
+  end
+
+=== Type Checking
+
+The 'funtools/types' file allows for declaring types which will be checked
+against arguments passed in to method calls at runtime.  Type definitions must
+be declared following method definition, to avoid the modifications to the
+method being overridden by a new declaration.
+
+  # Define a method that adds two numbers and returns a float of the result.
+  def add_two_convert_to_float(a, b)
+    (a + b).to_f
+  end
+
+  # Set the type definition for the method.  This method takes two integers,
+  # and returns a Float
+  settype(:add_two_convert_to_float, Fixnum, Fixnum, Float)
+
+  # If wrong types are passed in or returned, a TypeError will be raised.
+  add_two_convert_to_float(1.0, 1.0)
+  # Raises TypeError: Expected Fixnum; got Float
+
+=== Composition
+
+The 'funtools/composition' file allows for convenient composition of methods
+and procs, as well as a +compose+ method for convenience.  Individual methods
+or procs can be composed directly:
+
+  # Add two, multiply by ten
+  add_two_mul_ten = 10.method(:*) * 2.method(:+)
+  add_two_mul_ten[5]
+  # => 70
+
+  # Methods and procs can be mixed
+  add_ints = ->(n,m) { n + m }
+  add_and_mul_ten = 10.method(:*) * add_ints
+  add_and_mul_ten[2, 5]
+  # => 70
+
+The +compose+ method will accept any number of functions to compose, and will
+accept Arrays, which curry arguments to the 2nd and later arguments of a given
+function:
+
+  # Remove surrounding whitespace, capitalize, and add a '!' to the end of a
+  # string.
+  clean_exclamation = compose([:gsub, /$/, '!'], :capitalize, :strip)
+  clean_exclamation["    function composition is rather useful  "]
+  # => "Function composition is rather useful!"
+
+The +pl+ function mimics the -> macro in clojure:
+
+  # Threading/pipeline of functions
+  # Multiply by 8, shift left, and then return a string of the result.
+  pl(15, [:*, 8], [:<<, 1], :to_s)
+  # => "240"
+
+=== Data Structures
+
+The 'funtools/cons' file provides cons cells, which allow for immutable data
+structures such as one would be used to programming in a lisp dialect:
+
+  # Create a cons cell
+  cell = cons(1, 2)
+  # => (1 2)
+  # Access the left element
+  cell.car
+  # => 1
+  # Access the second element
+  cell.cdr
+  # => 2
+
+The +head+ and +tail+ methods are aliased to +car+ and +cdr+ respectively for
+programmers who are used to that convention (e.g. from Erlang).  Additionally,
+the +list+ method creates a linked list consisting of cons cells, terminated
+with a nil right entry on the terminal cell:
+
+  # Create a new list
+  example = list(1, 2, 3)
+  example == cons(1, cons(2, cons(3, nil)))
+  # => true
+
+== Contributions
+
+Contributions are welcome!  To contribute to the project, please:
+
+  * Fork the project.
+  * Make a topic branch for your contribution if it's more than a simple fix.
+  * Add tests for any new functionality/to verify that bugs have been fixed.
+  * Send a merge request on GitLab against the working branch.
+
+== Copyright
+
+Copyright © 2014 Tina Wuest under the MIT license.  See LICENSE for details.
